@@ -1,54 +1,76 @@
-import { AfterViewInit, Component, HostListener, OnInit } from '@angular/core';
+import {
+  AfterViewInit,
+  Component,
+  ElementRef,
+  HostListener,
+  ViewChild,
+} from '@angular/core';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import * as _ from 'lodash';
+import { IframeData } from './iframe.data.interface';
 
 @Component({
   selector: 'app-root',
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.less'],
 })
-export class AppComponent implements OnInit, AfterViewInit {
+export class AppComponent implements AfterViewInit {
   myOrigin = 'http://localhost:4201';
   remoteOrigin = 'http://localhost:4200';
+  urlQueryParam = 'http://localhost:4200/operation?id=1';
+  urlRouteParam = 'http://localhost:4200/operation/2';
+  content = 0;
+  numOfMessagesRecievedFromIframes = 0;
 
-  urlSafe: SafeResourceUrl;
-  data = { a: 1, b: new Date() };
+  urlSafeQueryParam: SafeResourceUrl;
+  urlSafeRouteParam: SafeResourceUrl;
+  data: IframeData = { count: 0 };
+
+  @ViewChild('iframeapp1', { static: false }) iframe1: ElementRef | undefined;
+  @ViewChild('iframeapp2', { static: false }) iframe2: ElementRef | undefined;
 
   constructor(public sanitizer: DomSanitizer) {
-    this.urlSafe = this.sanitizer.bypassSecurityTrustResourceUrl(
-      this.remoteOrigin
+    this.urlSafeQueryParam = this.sanitizer.bypassSecurityTrustResourceUrl(
+      this.urlQueryParam
+    );
+    this.urlSafeRouteParam = this.sanitizer.bypassSecurityTrustResourceUrl(
+      this.urlRouteParam
     );
   }
+
   ngAfterViewInit(): void {
-    var iframe = document.getElementById('iframeapp');
+    this.sendDataToIframe(this.iframe1);
+    this.sendDataToIframe(this.iframe2);
+  }
+
+  sendDataToIframe(iframe: ElementRef | undefined) {
     if (iframe == null) return;
-    const iWindow = (<HTMLIFrameElement>iframe).contentWindow;
+    const iWindow = (<HTMLIFrameElement>iframe.nativeElement).contentWindow;
     if (iWindow === null) return;
     setInterval(() => {
-      debugger;
       iWindow.postMessage(
         `main-app:${JSON.stringify(this.data)}`,
         this.remoteOrigin
       );
-    }, 5000);
+      this.data.count++;
+    }, 1000);
   }
 
   @HostListener('window:message', ['$event'])
   onMessage(event: MessageEvent) {
     if (event.type === 'message' && _.isString(event.data)) {
-      debugger;
       if (event.origin !== this.myOrigin) {
-        debugger;
         const message = event.data;
         const delimiter = message.indexOf(':');
         if (!delimiter) {
           throw new Error('bad message format');
         }
         const source = message.substring(0, delimiter);
-        const data = JSON.parse(
+        const data: IframeData = JSON.parse(
           message.substring(delimiter + 1, message.length)
         );
-        data.b = new Date(data.b);
+        this.content = data.count;
+        this.numOfMessagesRecievedFromIframes++;
         console.log(
           `main-app rcv message source: ${source} data: ${JSON.stringify(
             data,
@@ -60,19 +82,19 @@ export class AppComponent implements OnInit, AfterViewInit {
     }
   }
 
-  ngOnInit(): void {
-    setInterval(() => {
-      console.log(
-        `main-app send message to ${this.remoteOrigin} ${JSON.stringify(
-          this.data,
-          null,
-          4
-        )}`
-      );
-      window.postMessage(
-        `main-app:${JSON.stringify(this.data)}`,
-        this.remoteOrigin
-      );
-    }, 5000);
-  }
+  // ngOnInit(): void {
+  //   setInterval(() => {
+  //     console.log(
+  //       `main-app send message to ${this.remoteOrigin} ${JSON.stringify(
+  //         this.data,
+  //         null,
+  //         4
+  //       )}`
+  //     );
+  //     window.postMessage(
+  //       `main-app:${JSON.stringify(this.data)}`,
+  //       this.remoteOrigin
+  //     );
+  //   }, 5000);
+  // }
 }
