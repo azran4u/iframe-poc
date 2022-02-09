@@ -1,6 +1,10 @@
 <div class="container">
-  <h1>this is iframe {{ title }}</h1>
+  <h1>this is iframe {{ title$ | async }}</h1>
   <h2>counter recieved from main app {{ content }}</h2>
-  <h2>id query param recieved from main app {{ queryParam }}</h2>
+  <h2>origin = {{ origin }}</h2>
+  <h2>
+    id query param recieved from main app using observable
+    {{ queryParam$ | async }}
+  </h2>
   <h2>id route param recieved from main app {{ routeParam }}</h2>
 </div>

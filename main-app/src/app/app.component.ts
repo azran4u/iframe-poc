@@ -15,10 +15,10 @@ import { IframeData } from './iframe.data.interface';
   styleUrls: ['./app.component.less'],
 })
 export class AppComponent implements AfterViewInit {
-  myOrigin = 'http://localhost:4201';
-  remoteOrigin = 'http://localhost:4200';
-  urlQueryParam = 'http://localhost:4200/operation?id=1';
-  urlRouteParam = 'http://localhost:4200/operation/2';
+  origin = window.location.origin;
+  iframeOrigin = 'http://localhost:4200';
+  urlQueryParam = `${this.iframeOrigin}/operation?id=1`;
+  urlRouteParam = `${this.iframeOrigin}/operation/2`;
   content = 0;
   numOfMessagesRecievedFromIframes = 0;
 
@@ -50,7 +50,7 @@ export class AppComponent implements AfterViewInit {
     setInterval(() => {
       iWindow.postMessage(
         `main-app:${JSON.stringify(this.data)}`,
-        this.remoteOrigin
+        this.iframeOrigin
       );
       this.data.count++;
     }, 1000);
@@ -59,7 +59,7 @@ export class AppComponent implements AfterViewInit {
   @HostListener('window:message', ['$event'])
   onMessage(event: MessageEvent) {
     if (event.type === 'message' && _.isString(event.data)) {
-      if (event.origin !== this.myOrigin) {
+      if (event.origin !== this.origin) {
         const message = event.data;
         const delimiter = message.indexOf(':');
         if (!delimiter) {
@@ -81,20 +81,4 @@ export class AppComponent implements AfterViewInit {
       }
     }
   }
-
-  // ngOnInit(): void {
-  //   setInterval(() => {
-  //     console.log(
-  //       `main-app send message to ${this.remoteOrigin} ${JSON.stringify(
-  //         this.data,
-  //         null,
-  //         4
-  //       )}`
-  //     );
-  //     window.postMessage(
-  //       `main-app:${JSON.stringify(this.data)}`,
-  //       this.remoteOrigin
-  //     );
-  //   }, 5000);
-  // }
 }

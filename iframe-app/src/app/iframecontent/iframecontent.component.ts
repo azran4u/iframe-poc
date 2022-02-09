@@ -1,6 +1,8 @@
-import { Component, HostListener, OnInit } from '@angular/core';
+import { Component, HostListener, OnDestroy, OnInit } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import * as _ from 'lodash';
+import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
 import { IframeData } from '../iframe.data.interface';
 
 @Component({
@@ -9,20 +11,19 @@ import { IframeData } from '../iframe.data.interface';
   styleUrls: ['./iframecontent.component.less'],
 })
 export class IframecontentComponent implements OnInit {
-  myOrigin = 'http://localhost:4200';
-  remoteOrigin = 'http://localhost:4201';
+  origin = window.location.origin;
   data: IframeData = { count: 0 };
   content = 0;
-  queryParam: string = '';
   routeParam: string = '';
-  title: string = '';
+  queryParam$ = new Observable<string>();
+  title$ = new Observable<string>();
 
   constructor(private route: ActivatedRoute) {}
 
   @HostListener('window:message', ['$event'])
   onMessage(event: MessageEvent) {
     if (event.type === 'message' && _.isString(event.data)) {
-      if (event.origin !== this.myOrigin) {
+      if (event.origin !== this.origin) {
         const message = event.data;
         const delimiter = message.indexOf(':');
         if (!delimiter) {
@@ -45,22 +46,21 @@ export class IframecontentComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    this.route.queryParams.subscribe((params) => {
-      this.queryParam = params['id'] ?? '';
-    });
+    this.queryParam$ = this.route.queryParams.pipe(
+      map((params) => params['id'] ?? '')
+    );
+
     this.routeParam = this.route.snapshot.paramMap.get('id') ?? '';
 
-    if (this.queryParam.length > 0) {
-      this.title = `query param = ${this.queryParam}`;
-    } else if (this.routeParam.length > 0) {
-      this.title = `route param = ${this.routeParam}`;
-    } else {
-      this.title = 'none';
-    }
+    this.title$ = this.queryParam$.pipe(
+      map((param) => {
+        return param ? param : this.routeParam ?? 'none';
+      })
+    );
 
     setInterval(() => {
       console.log(
-        `iframe-app send message to ${this.myOrigin} ${JSON.stringify(
+        `iframe-app send message to ${this.origin} ${JSON.stringify(
           this.data,
           null,
           4
